@@ -1,11 +1,17 @@
 var startButton = document.getElementById('startButton');
 var callButton = document.getElementById('callButton');
 var hangupButton = document.getElementById('hangupButton');
-callButton.disabled = true;
-hangupButton.disabled = true;
 startButton.onclick = start;
 callButton.onclick = call;
 hangupButton.onclick = hangup;
+
+var localStream;
+var pc1;
+var pc2;
+var offerOptions = {
+  offerToReceiveAudio: 1,
+  offerToReceiveVideo: 1
+};
 
 var startTime;
 var localVideo = document.getElementById('localVideo');
@@ -13,13 +19,13 @@ var remoteVideo = document.getElementById('remoteVideo');
 
 function gotStream(stream) {
   localVideo.srcObject = stream;
-  // Add localStream to global scope so it's accessible from the browser console
-  window.localStream = localStream = stream;
-  callButton.disabled = false;
+  localStream = stream;
 }
 
+function gotRemoteStream(e) {
+   remoteVideo.srcObject = e.stream;
+}
 function start() {
-  startButton.disabled = true;
   navigator.mediaDevices.getUserMedia({
     audio: false,
     video: true
@@ -32,7 +38,69 @@ function start() {
 }
 
 function call() {
+  var videoTracks = localStream.getVideoTracks();
+  var audioTracks = localStream.getAudioTracks();
+
+  var servers = null;
+  pc1 = new RTCPeerConnection(servers);
+  pc1.onicecandidate = function(e) {
+    onIceCandidate(pc1, e);
+  };
+
+  pc2 = new RTCPeerConnection(servers);
+  pc2.onicecandidate = function(e) {
+    onIceCandidate(pc2, e);
+  };
+
+  // Listen to new stream
+  pc2.onaddstream = gotRemoteStream;
+
+  // Need to have a stream before sending offer
+  pc1.addStream(localStream);
+
+  pc1.createOffer(
+    offerOptions
+  ).then(
+    onCreateOfferSuccess,
+    onCreateSessionDescriptionError
+  );
+
+}
+
+function onCreateSessionDescriptionError(error) {
+  console.log('Failed to create session description: ' + error.toString());
+}
+
+function onCreateOfferSuccess(desc) {
+  pc1.setLocalDescription(desc);
+  pc2.setRemoteDescription(desc);
+
+  pc2.createAnswer().then(
+    onCreateAnswerSuccess,
+    onCreateSessionDescriptionError
+  );
+}
+
+function onCreateAnswerSuccess(desc) {
+  pc2.setLocalDescription(desc);
+  pc1.setRemoteDescription(desc);
+}
+
+function getOtherPc(pc) {
+  return (pc === pc1) ? pc2 : pc1;
+}
+
+function onIceCandidate(pc, event) {
+  if (event.candidate) {
+    getOtherPc(pc).addIceCandidate(
+      new RTCIceCandidate(event.candidate)
+    );
+  }
 }
 
 function hangup() {
+  pc1.close();
+  pc2.close();
+  pc1 = null;
+  pc2 = null;
 }
