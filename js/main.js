@@ -52,8 +52,22 @@ function call() {
     onIceCandidate(pc2, e);
   };
 
+  // Create data channel
+  sendChannel = pc1.createDataChannel('sendDataChannel');
+
+  sendChannel.onopen = e => console.log('sendChannel open');
+  sendChannel.onclose = e => console.log('sendChannel close');
+
   // Listen to new stream
   pc2.onaddstream = gotRemoteStream;
+
+  // Listen to data channel
+  pc2.ondatachannel = e => {
+    receiveChannel = event.channel;
+    receiveChannel.onmessage = e => dataChannelReceive.value = e.data;;
+    receiveChannel.onopen = e => console.log('receiveChannel open');
+    receiveChannel.onclose = e => console.log('receiveChannel close');
+  };
 
   // Need to have a stream before sending offer
   pc1.addStream(localStream);
@@ -65,6 +79,10 @@ function call() {
     onCreateSessionDescriptionError
   );
 
+}
+
+function sendData() {
+  sendChannel.send(dataChannelSend.value);
 }
 
 function onCreateSessionDescriptionError(error) {
