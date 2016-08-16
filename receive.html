@@ -1,0 +1,53 @@
+<h1>Bob (Receiver)</h1>
+
+<video id="video" autoplay></video>
+
+<textarea id="dataReceive" disabled></textarea>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="js/lib/adapter.js"></script>
+<script>
+  // Socket connection
+  var socket = io.connect();
+
+  // Create peer connection
+  var peerConnection = new RTCPeerConnection(null);
+
+  // Be ready to send the candidate infomation to Alice
+  peerConnection.onicecandidate = function (event) {
+    console.log('ICE candidate information sent to Alice');
+    if (event.candidate) {
+      socket.emit('bob-sending-ice-candidate', event.candidate);
+    }
+  };
+
+  // Be ready to receive video from Alice
+  peerConnection.onaddstream = function (event) {
+    console.log('Received video stream from Alice. Happy ending.');
+    // Show video stream to the <video> element
+    document.getElementById('video').srcObject = event.stream;
+  }
+
+  // Ask the signalling server that I want to connect
+  socket.emit('i-am-bob-and-i-want-to-connect');
+  console.log('Requested the signalling server to meet Alice');
+
+  // Handle messages from Alice
+  socket.on('alice-sending-ice-candidate', function (candidate) {
+    console.log('Received an ice candidate from Alice');
+    // Update ICE candidate info
+    peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+  });
+
+  socket.on('alice-offer-a-session', function (aliceSessionDescription) {
+    console.log('Alice has offerred a session');
+    peerConnection.setRemoteDescription(aliceSessionDescription);
+
+    // Create an answer and send session description back to Alice
+    peerConnection.createAnswer()
+      .then(function (bobSessionDescription) {
+        socket.emit('bob-answer-the-offer', bobSessionDescription);
+        console.log('Offer accepted. An answer is sent to Alice.');
+      });
+  });
+</script>

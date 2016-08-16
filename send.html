@@ -1,0 +1,103 @@
+<h1>Alice (Sender)</h1>
+
+<video id="video" autoplay></video>
+
+<textarea
+       id="dataSend"
+       onkeyup="sendData()"
+       placeholder="Press Start, enter some text, then press Send."></textarea>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="js/lib/adapter.js"></script>
+
+<script>
+ // Socket connection
+  var socket = io.connect();
+
+  // List of all peer connection
+  var pcList = {};
+
+  // Video stream
+  var videoStream;
+
+  // Request camera
+  navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: true,
+  })
+  .then(function (stream) {
+    console.log('Alice\'s webcam is ready!');
+    // Show video stream to the <video> element
+    document.getElementById('video').srcObject = videoStream = stream;
+  });
+
+// Tell the signalling that I am Alice
+socket.emit('i-am-alice');
+console.log('Told the signalling server that Alice is here.');
+
+// Wait for Bob
+socket.on('bob-is-coming', function (bob) {
+  console.log(bob, ' want to connect.');
+
+  // Create peer connection for Bob
+  var peerConnection = pcList[bob] = new RTCPeerConnection(null);
+
+  // Be ready to send the candidate infomation to Bob
+  // Candidate infomation will be available when an offer is created
+  peerConnection.onicecandidate = function (event) {
+    console.log('ICE candidate information sent to ', bob);
+    if (event.candidate) {
+      socket.emit('alice-sending-ice-candidate', event.candidate);
+    }
+  };
+
+  // Add videoStream to the peer connection
+  peerConnection.addStream(videoStream);
+
+  console.log('An RTCPeerConnection with video stream is created for ', bob);
+
+  // Create an offer
+  peerConnection.createOffer().then(function (sessionDescription) {
+    // Set description as local description
+    peerConnection.setLocalDescription(sessionDescription);
+
+    // Send sessionDescription to Bob
+    socket.emit('alice-offer-a-session', sessionDescription);
+
+    console.log('Alice sent an offer to ', bob);
+  });
+});
+
+socket.on('bob-sending-ice-candidate', function (data) {
+  // Update ICE candidate info
+  console.log('Received an ICE candidate from ', bob);
+  pcList[data.bobName].addIceCandidate(new RTCIceCandidate(data.candidate));
+});
+
+socket.on('bob-answer-the-offer', function (data) {
+  console.log(data.bobName, ' accepted the offer.');
+  // Set Bob's sessionDescription as remote description
+  pcList[data.bobName].setRemoteDescription(data.sessionDescription);
+});
+
+socket.on('bob-is-leaving', function (bob) {
+  console.log(bob, ' has left. Bye, ', bob);
+  delete pcList[bob];
+});
+
+    /**
+    ** We are done the set up! **
+    If Bob want to connect to me to see my face, here are the next steps:
+    - Bob tell me that he is interested in seeing my face by sending an event via socket io (signalling channel)
+    - I create an offer which give me my session description, I also set this as my local descrition
+    - I send my sessionDescription so Bob can set it as his remote description
+    - I send my ICE Candidate information so Bob can add it to his peer connection object
+    - Bob create an answer which give him a session description, he set that as his local description.
+    - Bob send me his sessionDescription so I can set it as my local description
+    - Bob send me his ICE Candidate information so I can add it to my peer connection object. This is the last step.
+    After the last step, Bob should be seeing my face on his computer via his peer connection stream (he can show it to a <video> element or stream it directly to his 27" TV)
+
+    The lines bellow handle the receiveing ICE candidate and sessionDescription information from the other peer.
+    **/
+</script>
+

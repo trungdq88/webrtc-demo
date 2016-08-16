@@ -10,9 +10,81 @@ var app = http.createServer(function(req, res) {
 
 var io = socketIO.listen(app);
 
-io.sockets.on('connection', function(socket) {
+var alice;
+var bobList= {};
 
-  socket.on('message', function (message) {
-    socket.broadcast.emit('message', message);
+io.sockets.on('connection', function(socket) {
+  // Wait for Alice
+  socket.on('i-am-alice', function () {
+    alice = socket;
+    console.log('Alice has come!');
+  });
+
+  // Wait for Bob(s)
+  socket.on('i-am-bob-and-i-want-to-connect', function () {
+    // Give Bob a name
+    var bob = 'Bob-' + socket.id;
+    bobList[socket.id] = socket;
+
+    // Tell Alice bob is coming
+    alice.emit('bob-is-coming', bob);
+
+    console.log(bob, ' has come! Told Alice about that.');
+  });
+
+  socket.on('alice-offer-a-session', function (sessionDescription) {
+    console.log('Alice sent an offer...');
+    // Deliver the offer to all Bobs
+    for (var i = 0; i < Object.keys(bobList).length; i++) {
+      var bob = bobList[Object.keys(bobList)[i]];
+      bob.emit('alice-offer-a-session', sessionDescription);
+      console.log('...delivered the offer to Bob-', bob.id);
+    }
+  });
+
+  socket.on('bob-answer-the-offer', function (sessionDescription) {
+    // Deliver the answer to Alice
+    var bob = 'Bob-' + socket.id;
+    alice.emit('bob-answer-the-offer', {
+      bobName: bob,
+      sessionDescription: sessionDescription,
+    });
+    console.log(bob, ' answered the offer. Told Alice about that.');
+  });
+
+  socket.on('alice-sending-ice-candidate', function (candidate) {
+    // Deliver the candidate to all Bobs
+    console.log('Alice sent an ICE candidate...');
+    for (var i = 0; i < Object.keys(bobList).length; i++) {
+      var bob = bobList[Object.keys(bobList)[i]];
+      bob.emit('alice-sending-ice-candidate', candidate);
+      console.log('...delivered the ICE candidate to Bob-', bob.id);
+    }
+  });
+
+  socket.on('bob-sending-ice-candidate', function (candidate) {
+    // Deliver the candidate to Alice
+    var bob = 'Bob-' + socket.id;
+    alice.emit('bob-sending-ice-candidate', {
+      bobName: bob,
+      candidate: candidate,
+    });
+    console.log(bob, ' sent an ICE candidate. Delivered that to Alice.');
   });
 });
+
+io.sockets.on('connection', function(socket) {
+  // Who has just disconnected?
+  if (alice && socket.id === alice.id) {
+    // Alice is tired, game over
+    return;
+  }
+
+  if (bobList[socket.id]) {
+    // Bob left, tell alice
+    var bob = 'Bob-' + socket.id;
+    alice.emit('bob-is-leaving', bob);
+  }
+});
+
+console.log('Server is on, waiting for Alice and Bob(s)');
