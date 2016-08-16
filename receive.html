@@ -23,7 +23,7 @@
 
   // Be ready to receive video from Alice
   peerConnection.onaddstream = function (event) {
-    console.log('Received video stream from Alice. Happy ending.');
+    console.log('Received video stream from Alice.');
     // Show video stream to the <video> element
     document.getElementById('video').srcObject = event.stream;
   }
@@ -46,6 +46,7 @@
     // Create an answer and send session description back to Alice
     peerConnection.createAnswer()
       .then(function (bobSessionDescription) {
+        peerConnection.setLocalDescription(bobSessionDescription);
         socket.emit('bob-answer-the-offer', bobSessionDescription);
         console.log('Offer accepted. An answer is sent to Alice.');
       });
