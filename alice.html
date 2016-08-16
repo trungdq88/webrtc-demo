@@ -70,7 +70,7 @@ socket.on('bob-is-coming', function (bob) {
 
 socket.on('bob-sending-ice-candidate', function (data) {
   // Update ICE candidate info
-  console.log('Received an ICE candidate from ', bob);
+  console.log('Received an ICE candidate from ', data.bobName);
   pcList[data.bobName].addIceCandidate(new RTCIceCandidate(data.candidate));
 });
 
