@@ -10,37 +10,36 @@
   // Socket connection
   var socket = io.connect();
 
-  // Create peer connection
-  var peerConnection = new RTCPeerConnection(null);
-
-  // Be ready to send the candidate infomation to Alice
-  peerConnection.onicecandidate = function (event) {
-    console.log('ICE candidate information sent to Alice');
-    if (event.candidate) {
-      socket.emit('bob-sending-ice-candidate', event.candidate);
-    }
-  };
-
-  // Be ready to receive video from Alice
-  peerConnection.onaddstream = function (event) {
-    console.log('Received video stream from Alice.');
-    // Show video stream to the <video> element
-    document.getElementById('video').srcObject = event.stream;
-  }
+  // Global variable for RTCPeerConnection
+  var peerConnection;
 
   // Ask the signalling server that I want to connect
   socket.emit('i-am-bob-and-i-want-to-connect');
   console.log('Requested the signalling server to meet Alice');
 
-  // Handle messages from Alice
-  socket.on('alice-sending-ice-candidate', function (candidate) {
-    console.log('Received an ice candidate from Alice');
-    // Update ICE candidate info
-    peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-  });
-
+  // Wait for Alice to offer
   socket.on('alice-offer-a-session', function (aliceSessionDescription) {
     console.log('Alice has offerred a session');
+
+    // Create peer connection
+    peerConnection = new RTCPeerConnection(null);
+
+    // Be ready to send the candidate infomation to Alice
+    peerConnection.onicecandidate = function (event) {
+      console.log('ICE candidate information sent to Alice');
+      if (event.candidate) {
+        socket.emit('bob-sending-ice-candidate', event.candidate);
+      }
+    };
+
+    // Be ready to receive video from Alice
+    peerConnection.onaddstream = function (event) {
+      console.log('Received video stream from Alice.');
+      // Show video stream to the <video> element
+      document.getElementById('video').srcObject = event.stream;
+    }
+
+    // Set Alice's sessionDescription as remote description
     peerConnection.setRemoteDescription(aliceSessionDescription);
 
     // Create an answer and send session description back to Alice
@@ -50,5 +49,25 @@
         socket.emit('bob-answer-the-offer', bobSessionDescription);
         console.log('Offer accepted. An answer is sent to Alice.');
       });
+  });
+
+  // Receive ICE candidate info from Alice
+  socket.on('alice-sending-ice-candidate', function (candidate) {
+    console.log('Received an ice candidate from Alice');
+    // Update ICE candidate info
+    peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+  });
+
+  socket.on('alice-left', function () {
+    console.log('Aw... Alice left. Looking for new Alice...');
+    peerConnection = null;
+    socket.emit('i-am-bob-and-i-want-to-connect');
+  });
+
+  socket.on('sorry-alice-is-not-here', function () {
+    console.log('Alice is not here, will try again after 5 second...');
+    setTimeout(function () {
+      socket.emit('i-am-bob-and-i-want-to-connect');
+    }, 5000);
   });
 </script>
