@@ -5,9 +5,9 @@ startButton.onclick = start;
 callButton.onclick = call;
 hangupButton.onclick = hangup;
 
+var isCaller = false;
 var localStream;
 var pc1;
-var pc2;
 var offerOptions = {
   offerToReceiveAudio: 1,
   offerToReceiveVideo: 1
@@ -47,11 +47,6 @@ function call() {
     onIceCandidate(pc1, e);
   };
 
-  pc2 = new RTCPeerConnection(servers);
-  pc2.onicecandidate = function(e) {
-    onIceCandidate(pc2, e);
-  };
-
   // Create data channel
   sendChannel = pc1.createDataChannel('sendDataChannel');
 
@@ -59,25 +54,27 @@ function call() {
   sendChannel.onclose = e => console.log('sendChannel close');
 
   // Listen to new stream
-  pc2.onaddstream = gotRemoteStream;
+  pc1.onaddstream = gotRemoteStream;
 
   // Listen to data channel
-  pc2.ondatachannel = e => {
+  pc1.ondatachannel = e => {
     receiveChannel = event.channel;
     receiveChannel.onmessage = e => dataChannelReceive.value = e.data;;
     receiveChannel.onopen = e => console.log('receiveChannel open');
     receiveChannel.onclose = e => console.log('receiveChannel close');
   };
 
-  // Need to have a stream before sending offer
-  pc1.addStream(localStream);
+  if (isCaller) {
+    // Need to have a stream before sending offer
+    pc1.addStream(localStream);
 
-  pc1.createOffer(
-    offerOptions
-  ).then(
-    onCreateOfferSuccess,
-    onCreateSessionDescriptionError
-  );
+    pc1.createOffer(
+      offerOptions
+    ).then(
+      onCreateOfferSuccess,
+      onCreateSessionDescriptionError
+    );
+  }
 
 }
 
@@ -91,17 +88,19 @@ function onCreateSessionDescriptionError(error) {
 
 function onCreateOfferSuccess(desc) {
   pc1.setLocalDescription(desc);
-  pc2.setRemoteDescription(desc);
 
-  pc2.createAnswer().then(
-    onCreateAnswerSuccess,
-    onCreateSessionDescriptionError
-  );
+  socket.emit('message', {
+    type: 'sdp',
+    data: desc,
+  });
 }
 
 function onCreateAnswerSuccess(desc) {
-  pc2.setLocalDescription(desc);
-  pc1.setRemoteDescription(desc);
+  pc1.setLocalDescription(desc);
+  socket.emit('message', {
+    type: 'sdp',
+    data: desc,
+  });
 }
 
 function getOtherPc(pc) {
@@ -110,15 +109,39 @@ function getOtherPc(pc) {
 
 function onIceCandidate(pc, event) {
   if (event.candidate) {
-    getOtherPc(pc).addIceCandidate(
-      new RTCIceCandidate(event.candidate)
-    );
+    socket.emit('message', {
+      type: 'candidate',
+      data: event.candidate,
+    });
   }
 }
 
 function hangup() {
   pc1.close();
-  pc2.close();
   pc1 = null;
-  pc2 = null;
 }
+
+// Signalling
+var socket = io.connect();
+
+socket.on('message', function (message) {
+  console.log('message:', message);
+  switch (message.type) {
+    case 'candidate':
+      pc1.addIceCandidate(
+        new RTCIceCandidate(message.data)
+      );
+      break;
+    case 'sdp':
+      pc1.setRemoteDescription(message.data);
+
+      if (!isCaller) {
+        pc1.addStream(localStream);
+        pc1.createAnswer().then(
+          onCreateAnswerSuccess,
+          onCreateSessionDescriptionError
+        );
+      }
+      break;
+  }
+});
