@@ -99,8 +99,8 @@ io.sockets.on('connection', function(socket) {
 
     var bob = 'Bob-' + socket.id;
     if (bobList[bob]) {
-      // Bob left, tell Alice
-      alice.emit('bob-is-leaving', bob);
+      // Bob left, tell Alice (if Alice is there)
+      alice && alice.emit('bob-is-leaving', bob);
       console.log(bob, ' left :-(')
     }
   });
