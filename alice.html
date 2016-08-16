@@ -47,7 +47,10 @@ socket.on('bob-is-coming', function (bob) {
   peerConnection.onicecandidate = function (event) {
     console.log('ICE candidate information sent to ', bob);
     if (event.candidate) {
-      socket.emit('alice-sending-ice-candidate', event.candidate);
+      socket.emit('alice-sending-ice-candidate', {
+        bobName: bob,
+        candidate: event.candidate,
+      });
     }
   };
 
@@ -62,7 +65,10 @@ socket.on('bob-is-coming', function (bob) {
     peerConnection.setLocalDescription(sessionDescription);
 
     // Send sessionDescription to Bob
-    socket.emit('alice-offer-a-session', sessionDescription);
+    socket.emit('alice-offer-a-session', {
+      bobName: bob,
+      sessionDescription: sessionDescription,
+    });
 
     console.log('Alice sent an offer to ', bob);
   });

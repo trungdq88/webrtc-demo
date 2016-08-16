@@ -24,7 +24,7 @@ io.sockets.on('connection', function(socket) {
   socket.on('i-am-bob-and-i-want-to-connect', function () {
     // Give Bob a name
     var bob = 'Bob-' + socket.id;
-    bobList[socket.id] = socket;
+    bobList[bob] = socket;
 
     // Tell Alice bob is coming
     alice.emit('bob-is-coming', bob);
@@ -32,14 +32,9 @@ io.sockets.on('connection', function(socket) {
     console.log(bob, ' has come! Told Alice about that.');
   });
 
-  socket.on('alice-offer-a-session', function (sessionDescription) {
-    console.log('Alice sent an offer...');
-    // Deliver the offer to all Bobs
-    for (var i = 0; i < Object.keys(bobList).length; i++) {
-      var bob = bobList[Object.keys(bobList)[i]];
-      bob.emit('alice-offer-a-session', sessionDescription);
-      console.log('...delivered the offer to Bob-', bob.id);
-    }
+  socket.on('alice-offer-a-session', function (data) {
+    console.log('Alice sent an offer to ', data.bobName);
+    bobList[data.bobName].emit('alice-offer-a-session', data.sessionDescription);
   });
 
   socket.on('bob-answer-the-offer', function (sessionDescription) {
@@ -52,14 +47,10 @@ io.sockets.on('connection', function(socket) {
     console.log(bob, ' answered the offer. Told Alice about that.');
   });
 
-  socket.on('alice-sending-ice-candidate', function (candidate) {
+  socket.on('alice-sending-ice-candidate', function (data) {
     // Deliver the candidate to all Bobs
-    console.log('Alice sent an ICE candidate...');
-    for (var i = 0; i < Object.keys(bobList).length; i++) {
-      var bob = bobList[Object.keys(bobList)[i]];
-      bob.emit('alice-sending-ice-candidate', candidate);
-      console.log('...delivered the ICE candidate to Bob-', bob.id);
-    }
+    console.log('Alice sent an ICE candidate to ', data.bobName);
+    bobList[data.bobName].emit('alice-sending-ice-candidate', data.candidate);
   });
 
   socket.on('bob-sending-ice-candidate', function (candidate) {
@@ -76,7 +67,7 @@ io.sockets.on('connection', function(socket) {
 io.sockets.on('connection', function(socket) {
   // Who has just disconnected?
   if (alice && socket.id === alice.id) {
-    // Alice is tired, game over
+    // TODO: Alice is tired, game over
     return;
   }
 
