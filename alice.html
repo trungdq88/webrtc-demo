@@ -4,34 +4,54 @@
 
 <textarea
        id="dataSend"
-       onkeyup="sendData()"
+       onkeyup="sendData(event)"
        placeholder="Press Start, enter some text, then press Send."></textarea>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="adapter.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
 
 <script>
- // Socket connection
-  var socket = io.connect();
+// Socket connection
+var socket = io.connect();
 
-  // List of all Bobs {key: value}
-  // key: string of bob name (socket id)
-  // value: RTCPeerConnection
-  var pcList = {};
+// STUN & TURN servers
+var peerConnectionConfig = null;
 
-  // Video stream from camera
-  var videoStream;
+// List of all Bobs {key: value}
+// key: string of bob name (socket id)
+// value: RTCPeerConnection
+var pcList = {};
 
-  // Request camera
-  navigator.mediaDevices.getUserMedia({
-    audio: false,
-    video: true,
-  })
-  .then(function (stream) {
-    console.log('Alice\'s webcam is ready!');
-    // Show video stream to the <video> element
-    document.getElementById('video').srcObject = videoStream = stream;
-  });
+// Video stream from camera
+var videoStream;
+
+// Global data channel so that we can send text from <textarea> element
+var dataChannel;
+
+// Request camera
+navigator.mediaDevices.getUserMedia({
+  audio: false,
+  video: true,
+})
+.then(function (stream) {
+  console.log('Alice\'s webcam is ready!');
+  // Show video stream to the <video> element
+  document.getElementById('video').srcObject = videoStream = stream;
+});
+
+// Get STUN && TURN server
+$.get("https://service.xirsys.com/ice", {
+  ident: "quangtrung",
+  secret: "enter-your-secret",
+  domain: "webrtc-demo-geeky.herokuapp.com",
+  application: "default",
+  room: "default",
+  secure: 1
+},
+function(data, status) {
+  peerConnectionConfig = data.d;
+});
 
 // Tell the signalling server that I am Alice
 socket.emit('i-am-alice');
@@ -42,7 +62,7 @@ socket.on('bob-is-coming', function (bob) {
   console.log(bob, ' want to connect.');
 
   // Create peer connection for Bob
-  var peerConnection = pcList[bob] = new RTCPeerConnection(null);
+  var peerConnection = pcList[bob] = new RTCPeerConnection(peerConnectionConfig);
 
   // Be ready to send the candidate infomation to Bob
   // Candidate infomation will be available when an offer is created
@@ -58,6 +78,9 @@ socket.on('bob-is-coming', function (bob) {
 
   // Add video stream to the peer connection
   peerConnection.addStream(videoStream);
+
+  // Add data channel to the peer connection
+  dataChannel = peerConnection.createDataChannel('text');
 
   console.log('An RTCPeerConnection with video stream is created for ', bob);
 
@@ -94,5 +117,9 @@ socket.on('bob-is-leaving', function (bob) {
   console.log(bob, ' has left. Bye, ', bob);
   delete pcList[bob];
 });
+
+function sendData(e) {
+  dataChannel.send(e.target.value);
+}
 </script>
 
