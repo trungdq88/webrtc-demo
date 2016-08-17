@@ -22,29 +22,31 @@ var alice;
 var bobList = {};
 
 // STUN/TURN servers for Alice and Bobs
-var getStunTurnServers = fetch('https://service.xirsys.com/ice?' +
-  'ident' + '=' + process.env.XIRSYS_IDENTITY +
-  '&secret' + '=' + process.env.XIRSYS_SECRET +
-  '&domain' + '=' + process.env.XIRSYS_DOMAIN +
-  '&application' + '=' + process.env.XIRSYS_APPLICATION +
-  '&room' + '=' + process.env.XIRSYS_ROOM +
-  '&secure' + '=' + process.env.XIRSYS_SECURE
-)
-  .then(function (r) { return r.json() })
-  .then(function (response) {
-    if (response.s === 200) {
-      console.log('STUN/TURN servers are ready.')
-      return response.d;
-    } else {
-      console.log('Could not get STUN/TURN servers :-(')
-      return null;
-    }
-  });
+var getStunTurnServers = function () {
+  return fetch('https://service.xirsys.com/ice?' +
+    'ident' + '=' + process.env.XIRSYS_IDENTITY +
+    '&secret' + '=' + process.env.XIRSYS_SECRET +
+    '&domain' + '=' + process.env.XIRSYS_DOMAIN +
+    '&application' + '=' + process.env.XIRSYS_APPLICATION +
+    '&room' + '=' + process.env.XIRSYS_ROOM +
+    '&secure' + '=' + process.env.XIRSYS_SECURE
+  )
+    .then(function (r) { return r.json() })
+    .then(function (response) {
+      if (response.s === 200) {
+        console.log('STUN/TURN servers are ready.')
+        return response.d;
+      } else {
+        console.log('Could not get STUN/TURN servers :-(')
+        return null;
+      }
+    });
+}
 
 io.sockets.on('connection', function(socket) {
 
   // Send STUN/TURN servers info to who ever just connected, saying hello
-  getStunTurnServers.then(function (servers) {
+  getStunTurnServers().then(function (servers) {
       socket.emit('hello-here-are-your-stun-turn-servers', servers)
   });
 
