@@ -43,15 +43,16 @@ var getStunTurnServers = fetch('https://service.xirsys.com/ice?' +
 
 io.sockets.on('connection', function(socket) {
 
+  // Send STUN/TURN servers info to who ever just connected, saying hello
+  getStunTurnServers.then(function (servers) {
+      socket.emit('hello-here-are-your-stun-turn-servers', servers)
+  });
+
   // 1. Alice come
   socket.on('i-am-alice', function () {
     if (!alice) {
       alice = socket;
 
-      // Send Alice STUN/TURN server
-      getStunTurnServers.then(function (servers) {
-          alice.emit('here-are-your-stun-turn-servers', servers)
-      });
       console.log('Alice has come!');
     } else {
       console.log('New alice has come but ignored because already had one.');
@@ -71,11 +72,6 @@ io.sockets.on('connection', function(socket) {
       socket.emit('sorry-alice-is-not-here');
       return;
     }
-
-    // Send Bob STUN/TURN server
-    getStunTurnServers.then(function (servers) {
-        socket.emit('here-are-your-stun-turn-servers', servers)
-    });
 
     // Tell Alice bob is coming
     alice.emit('bob-is-coming', bob);

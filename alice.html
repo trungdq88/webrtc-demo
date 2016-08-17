@@ -1,3 +1,4 @@
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel='stylesheet' href='style.css' type='text/css' />
 
 <video id="video" autoplay></video>
@@ -35,9 +36,15 @@ navigator.mediaDevices.getUserMedia({
   document.getElementById('video').srcObject = videoStream = stream;
 });
 
-// Tell the signalling server that I am Alice
-socket.emit('i-am-alice');
-console.log('Told the signalling server that Alice is here.');
+// Wait for STUN/TURN servers
+socket.on('hello-here-are-your-stun-turn-servers', function (servers) {
+  console.log('Got STUN/TURN servers: ', servers);
+  peerConnectionConfig = servers;
+
+  // Tell the signalling server that I am Alice
+  socket.emit('i-am-alice');
+  console.log('Told the signalling server that Alice is here.');
+});
 
 // Wait for Bob
 socket.on('bob-is-coming', function (bob) {
@@ -103,12 +110,6 @@ socket.on('bob-sending-ice-candidate', function (data) {
 socket.on('bob-is-leaving', function (bob) {
   console.log(bob, ' has left. Bye, ', bob);
   delete pcList[bob];
-});
-
-// Wait for STUN/TURN servers
-socket.on('here-are-your-stun-turn-servers', function (servers) {
-  console.log('Got STUN/TURN servers: ', servers);
-  peerConnectionConfig = servers;
 });
 </script>
 

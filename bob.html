@@ -1,3 +1,4 @@
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel='stylesheet' href='style.css' type='text/css' />
 
 <video id="video" autoplay></video>
@@ -16,9 +17,15 @@ var peerConnection;
 // STUN & TURN servers
 var peerConnectionConfig = null;
 
-// Ask the signalling server that I want to connect
-socket.emit('i-am-bob-and-i-want-to-connect');
-console.log('Requested the signalling server to meet Alice');
+// Wait for STUN/TURN servers
+socket.on('hello-here-are-your-stun-turn-servers', function (servers) {
+  console.log('Got STUN/TURN servers: ', servers);
+  peerConnectionConfig = servers;
+
+  // Ask the signalling server that I want to connect
+  socket.emit('i-am-bob-and-i-want-to-connect');
+  console.log('Requested the signalling server to meet Alice');
+});
 
 // Wait for Alice to offer
 socket.on('alice-offer-a-session', function (aliceSessionDescription) {
@@ -82,11 +89,5 @@ socket.on('sorry-alice-is-not-here', function () {
   setTimeout(function () {
     socket.emit('i-am-bob-and-i-want-to-connect');
   }, 3000);
-});
-
-// Wait for STUN/TURN servers
-socket.on('here-are-your-stun-turn-servers', function (servers) {
-  console.log('Got STUN/TURN servers: ', servers);
-  peerConnectionConfig = servers;
 });
 </script>
