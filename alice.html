@@ -109,6 +109,7 @@ socket.on('bob-sending-ice-candidate', function (data) {
 
 socket.on('bob-is-leaving', function (bob) {
   console.log(bob, ' has left. Bye, ', bob);
+  pcList[bob].close();
   delete pcList[bob];
 });
 </script>

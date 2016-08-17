@@ -80,6 +80,7 @@ socket.on('alice-sending-ice-candidate', function (candidate) {
 
 socket.on('alice-left', function () {
   console.log('Aw... Alice left. Looking for new Alice...');
+  peerConnection.close();
   peerConnection = null;
   socket.emit('i-am-bob-and-i-want-to-connect');
 });
