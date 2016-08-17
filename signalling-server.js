@@ -72,13 +72,13 @@ io.sockets.on('connection', function(socket) {
       return;
     }
 
-    // Tell Alice bob is coming
-    alice.emit('bob-is-coming', bob);
-
     // Send Bob STUN/TURN server
     getStunTurnServers.then(function (servers) {
         socket.emit('here-are-your-stun-turn-servers', servers)
     });
+
+    // Tell Alice bob is coming
+    alice.emit('bob-is-coming', bob);
 
     console.log(bob, ' has come! Told Alice about that.');
   });
