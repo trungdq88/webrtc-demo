@@ -36,7 +36,7 @@ socket.on('alice-offer-a-session', function (aliceSessionDescription) {
 
   // Be ready to send the candidate infomation to Alice
   peerConnection.onicecandidate = function (event) {
-    console.log('ICE candidate information sent to Alice');
+    console.log('Sent ICE candidate information to Alice');
     if (event.candidate) {
       socket.emit('bob-sending-ice-candidate', event.candidate);
     }
