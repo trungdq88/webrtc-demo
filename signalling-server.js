@@ -136,10 +136,6 @@ io.sockets.on('connection', function(socket) {
       console.log(bob, ' left :-(')
     }
   });
-
-  // In case Alice and Bob want STUN/TURN servers
-  socket.on('i-want-stun-turn-servers', function () {
-  });
 });
 
 console.log('Signalling Server is on, waiting for Alice and Bob(s)');
