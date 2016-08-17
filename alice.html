@@ -33,7 +33,7 @@
     document.getElementById('video').srcObject = videoStream = stream;
   });
 
-// Tell the signalling that I am Alice
+// Tell the signalling server that I am Alice
 socket.emit('i-am-alice');
 console.log('Told the signalling server that Alice is here.');
 

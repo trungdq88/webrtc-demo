@@ -107,4 +107,4 @@ io.sockets.on('connection', function(socket) {
 });
 
 
-console.log('Server is on, waiting for Alice and Bob(s)');
+console.log('Signalling Server is on, waiting for Alice and Bob(s)');
