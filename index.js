@@ -2,6 +2,8 @@ var os = require('os');
 var nodeStatic = require('node-static');
 var http = require('http');
 var socketIO = require('socket.io');
+var fetch = require('node-fetch');
+require('dotenv').config({silent: true}); // Load config from .env file
 
 // Serve client static files
 var fileServer = new(nodeStatic.Server)();
@@ -17,7 +19,27 @@ var alice;
 // List of Bobs {key: value}
 // - key: string of bob name (socket id)
 // - value: Socket
-var bobList= {};
+var bobList = {};
+
+// STUN/TURN servers for Alice and Bobs
+var getStunTurnServers = fetch('https://service.xirsys.com/ice?' +
+  'ident' + '=' + process.env.XIRSYS_IDENTITY +
+  '&secret' + '=' + process.env.XIRSYS_SECRET +
+  '&domain' + '=' + process.env.XIRSYS_DOMAIN +
+  '&application' + '=' + process.env.XIRSYS_APPLICATION +
+  '&room' + '=' + process.env.XIRSYS_ROOM +
+  '&secure' + '=' + process.env.XIRSYS_SECURE
+)
+  .then(function (r) { return r.json() })
+  .then(function (response) {
+    if (response.s === 200) {
+      console.log('STUN/TURN servers are ready.')
+      return response.d;
+    } else {
+      console.log('Could not get STUN/TURN servers :-(')
+      return null;
+    }
+  });
 
 io.sockets.on('connection', function(socket) {
 
@@ -25,6 +47,11 @@ io.sockets.on('connection', function(socket) {
   socket.on('i-am-alice', function () {
     if (!alice) {
       alice = socket;
+
+      // Send Alice STUN/TURN server
+      getStunTurnServers.then(function (servers) {
+          alice.emit('here-are-your-stun-turn-servers', servers)
+      });
       console.log('Alice has come!');
     } else {
       console.log('New alice has come but ignored because already had one.');
@@ -47,6 +74,11 @@ io.sockets.on('connection', function(socket) {
 
     // Tell Alice bob is coming
     alice.emit('bob-is-coming', bob);
+
+    // Send Bob STUN/TURN server
+    getStunTurnServers.then(function (servers) {
+        socket.emit('here-are-your-stun-turn-servers', servers)
+    });
 
     console.log(bob, ' has come! Told Alice about that.');
   });
@@ -103,6 +135,10 @@ io.sockets.on('connection', function(socket) {
       alice && alice.emit('bob-is-leaving', bob);
       console.log(bob, ' left :-(')
     }
+  });
+
+  // In case Alice and Bob want STUN/TURN servers
+  socket.on('i-want-stun-turn-servers', function () {
   });
 });
 

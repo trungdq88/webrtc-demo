@@ -8,7 +8,6 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="adapter.js"></script>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
 
 <script>
 // Socket connection
@@ -34,19 +33,6 @@ navigator.mediaDevices.getUserMedia({
   console.log('Alice\'s webcam is ready!');
   // Show video stream to the <video> element
   document.getElementById('video').srcObject = videoStream = stream;
-});
-
-// Get STUN && TURN server
-$.get("https://service.xirsys.com/ice", {
-  ident: "quangtrung",
-  secret: "enter-your-secret",
-  domain: "webrtc-demo-geeky.herokuapp.com",
-  application: "default",
-  room: "default",
-  secure: 1
-},
-function(data, status) {
-  peerConnectionConfig = data.d;
 });
 
 // Tell the signalling server that I am Alice
@@ -79,9 +65,9 @@ socket.on('bob-is-coming', function (bob) {
   var dataChannel = peerConnection.createDataChannel('text');
 
   // Be ready to send textarea value to Bob using data channel
-  $('#dataSend').keyup(function (e) {
+  document.getElementById('dataSend').onkeyup = function (e) {
     dataChannel.send(e.target.value);
-  });
+  };
 
   console.log('An RTCPeerConnection with video stream is created for ', bob);
 
@@ -117,6 +103,12 @@ socket.on('bob-sending-ice-candidate', function (data) {
 socket.on('bob-is-leaving', function (bob) {
   console.log(bob, ' has left. Bye, ', bob);
   delete pcList[bob];
+});
+
+// Wait for STUN/TURN servers
+socket.on('here-are-your-stun-turn-servers', function (servers) {
+  console.log('Got STUN/TURN servers: ', servers);
+  peerConnectionConfig = servers;
 });
 </script>
 

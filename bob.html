@@ -6,7 +6,6 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="adapter.js"></script>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
 <script>
 // Socket connection
 var socket = io.connect();
@@ -16,19 +15,6 @@ var peerConnection;
 
 // STUN & TURN servers
 var peerConnectionConfig = null;
-
-// Get STUN && TURN server
-$.get("https://service.xirsys.com/ice", {
-ident: "quangtrung",
-secret: "enter-your-secret",
-domain: "webrtc-demo-geeky.herokuapp.com",
-application: "default",
-room: "default",
-secure: 1
-},
-function(data, status) {
-peerConnectionConfig = data.d;
-});
 
 // Ask the signalling server that I want to connect
 socket.emit('i-am-bob-and-i-want-to-connect');
@@ -96,5 +82,11 @@ socket.on('sorry-alice-is-not-here', function () {
   setTimeout(function () {
     socket.emit('i-am-bob-and-i-want-to-connect');
   }, 3000);
+});
+
+// Wait for STUN/TURN servers
+socket.on('here-are-your-stun-turn-servers', function (servers) {
+  console.log('Got STUN/TURN servers: ', servers);
+  peerConnectionConfig = servers;
 });
 </script>
