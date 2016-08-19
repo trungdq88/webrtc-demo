@@ -11,3 +11,10 @@
 - WebRTC (duh)
 - [adapter.js](https://github.com/webrtc/adapter) for client `RTCPeerConncetion` and `getUserMedia`
 - [NodeJS with Socket.IO](http://socket.io/) for Signaling Server
+- [xirsys](http://xirsys.com) for STUN/TURN server service.
+
+If you want to run this on your server, register an account at [xirsys](http://xirsys.com) and set the necessary variables to `.env` (see `.env.sample`).
+
+    npm start
+    
+    
